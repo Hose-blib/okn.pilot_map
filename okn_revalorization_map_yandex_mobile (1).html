@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>Интерактивная карта ОКН для целей ревалоризации</title>
+<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=gfuywn34lo7xagwYEnT5NxHqadjvi8BjYINt42b0Lx4IEA6fue7GVLTpYpK9I5CORWsSQZ-zKoRGEIyI8lS7_ZY1NF2u__U3W8Um0mz2PYa9taaY8Ksc_Ovxizlhc4yEopw5pGTt_GHJ9b3rWYrSYzqm7geLjmYitUad6r4eGC-WtniB_BNPt_71wVClbiiyMr11oxcXRNL2H1dEAvDZkC78XQyOKXDQZZUAgzE9vHs2qBidPq36ElWULkGW9FHZ1MQd15ccXH9woSPec9fxf8HsXo5tYU3aeN837wetQ_1_hLOmAGu06WYci5pZ0mm4owE7aW1aB0waV0wx6O_fW01J2o8DHrL1h1677qyNdYU" charset="UTF-8"></script><style>
+:root {
+  --paper:#fffdf8;
+  --cream:#f8efdf;
+  --ink:#0b1b2f;
+  --muted:#6c6258;
+  --line:rgba(150,105,62,.34);
+  --red:#a9231d;
+  --orange:#d3680a;
+  --blue:#2c7897;
+  --river:#6eaac2;
+  --riverInner:#cbeaf2;
+  --road:#c89557;
+  --roadInner:#fff3dc;
+  --road2:#d8b579;
+  --park:#b7c99a;
+  --shadow:0 18px 44px rgba(70,49,31,.14);
+  --radius:22px;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; -webkit-text-size-adjust:100%; }
+body {
+  font-family: Arial, "Segoe UI", sans-serif;
+  color:var(--ink);
+  background:linear-gradient(135deg,#efe0ca 0%,#fbf8f0 48%,#e7efe9 100%);
+}
+.app { width:min(1500px, calc(100vw - 24px)); margin:14px auto 24px; }
+.hero {
+  background:rgba(255,253,248,.92);
+  border:1px solid var(--line);
+  border-radius:26px;
+  box-shadow:var(--shadow);
+  padding:20px 24px;
+}
+.hero-row { display:flex; justify-content:space-between; gap:18px; align-items:flex-end; }
+h1 { margin:0; font-size:clamp(25px,4vw,50px); line-height:1; letter-spacing:-.04em; }
+.subtitle { margin-top:8px; color:#8a6b4c; font-size:clamp(13px,1.5vw,18px); letter-spacing:.18em; text-transform:uppercase; }
+.metrics { display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end; }
+.metric { min-width:118px; border:1px solid var(--line); background:#fbf2e3; border-radius:17px; padding:10px 12px; text-align:right; }
+.metric b { display:block; font-size:21px; }
+.metric span { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+.layout { display:grid; grid-template-columns:minmax(0,1.36fr) minmax(350px,.64fr); gap:14px; margin-top:14px; }
+.card { background:rgba(255,253,248,.93); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+.toolbar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px; border-bottom:1px solid rgba(150,105,62,.22); background:#fff8ec; }
+.btns { display:flex; gap:8px; flex-wrap:wrap; }
+button, .link {
+  min-height:38px;
+  border:1px solid rgba(139,98,61,.36);
+  background:#fffdf8;
+  color:var(--ink);
+  border-radius:999px;
+  padding:8px 12px;
+  font:inherit;
+  font-size:13px;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  touch-action:manipulation;
+}
+button.active { background:#102033; color:#fffdf8; border-color:#102033; }
+.map-wrap { position:relative; height:700px; background:#efe4d0; overflow:hidden; touch-action:none; }
+.map-svg { width:100%; height:100%; display:block; cursor:grab; -webkit-tap-highlight-color:transparent; text-rendering:geometricPrecision; }
+.map-svg.dragging { cursor:grabbing; }
+.legend {
+  position:absolute; right:14px; bottom:14px; width:270px;
+  background:rgba(255,253,248,.95);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:13px;
+  box-shadow:0 12px 28px rgba(50,35,23,.13);
+}
+.legend-title { font-weight:800; letter-spacing:.08em; font-size:12px; text-transform:uppercase; color:#6d543e; margin-bottom:8px; }
+.legend-row { display:flex; gap:9px; align-items:center; font-size:13px; line-height:1.25; padding:6px 0; }
+.dot { width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 0 1px rgba(53,36,21,.35); flex:0 0 16px; }
+.hints { position:absolute; left:14px; bottom:14px; display:flex; gap:8px; flex-wrap:wrap; max-width:calc(100% - 310px); }
+.hint { background:rgba(255,253,248,.9); border:1px solid rgba(150,105,62,.28); border-radius:999px; padding:7px 10px; font-size:12px; color:#675a4d; }
+.panel { min-height:755px; display:flex; flex-direction:column; }
+.panel-head { padding:20px 21px 16px; background:linear-gradient(135deg,#fffdf8,#f7e9d3); border-bottom:1px solid rgba(150,105,62,.22); }
+.eyebrow { font-size:11px; letter-spacing:.13em; text-transform:uppercase; font-weight:800; color:#8a6b4c; }
+.panel h2 { margin:6px 0 8px; font-size:27px; line-height:1.05; }
+.address { color:#665d54; font-size:14px; line-height:1.4; }
+.badge { display:inline-flex; align-items:center; margin:10px 7px 0 0; border-radius:999px; padding:7px 10px; color:#fff; font-weight:800; font-size:12px; }
+.badge.red { background:var(--red); }
+.badge.orange { background:var(--orange); }
+.panel-body { padding:17px 21px 21px; overflow:auto; }
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.info { border:1px solid rgba(150,105,62,.24); background:#fbf4e8; border-radius:16px; padding:12px; }
+.info small { display:block; color:#80664f; font-size:11px; text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; }
+.info b { font-size:17px; }
+.section { margin-top:17px; }
+.section h3 { margin:0 0 7px; font-size:14px; }
+.section p { margin:0; font-size:14px; color:#3d4651; line-height:1.52; }
+.score-list { display:flex; flex-direction:column; gap:8px; }
+.score-row { display:grid; grid-template-columns:minmax(135px,1fr) 86px 30px; gap:8px; align-items:center; font-size:12px; }
+.bar { height:10px; background:#ecddca; border-radius:999px; overflow:hidden; }
+.bar i { display:block; height:100%; background:linear-gradient(90deg,#9b5335,#cf8a40); border-radius:999px; }
+.score-note { margin-top:9px; font-size:12px; color:#6f6358; line-height:1.42; }
+.object-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:14px; }
+.object-card { display:grid; grid-template-columns:88px 1fr; gap:13px; align-items:center; padding:15px; min-height:155px; cursor:pointer; }
+.object-card.selected { outline:3px solid rgba(16,32,51,.18); }
+.medal { width:54px; height:54px; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:900; font-size:28px; border:3px solid #fff; box-shadow:0 8px 16px rgba(68,41,22,.18); }
+.object-card h3 { margin:0 0 8px; font-size:22px; line-height:1.05; }
+.card-line { display:flex; gap:7px; align-items:flex-start; margin:8px 0; font-size:14px; color:#2e3946; }
+.table-card { margin-top:14px; }
+.table-title { display:flex; justify-content:space-between; gap:14px; align-items:center; flex-wrap:wrap; padding:15px 18px; border-bottom:1px solid rgba(150,105,62,.22); }
+.table-title h2 { margin:0 0 3px; font-size:19px; }
+.note { color:#74685d; font-size:12px; line-height:1.38; }
+.table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; font-size:13px; min-width:780px; }
+th, td { padding:12px 13px; border-bottom:1px solid rgba(150,105,62,.18); text-align:left; vertical-align:top; }
+th { background:#fbf4e8; color:#65584b; text-transform:uppercase; letter-spacing:.05em; font-size:11px; }
+tr.selected td { background:#f7e8d3; }
+
+/* SVG map */
+.paper-line { fill:none; stroke:rgba(104,78,55,.18); stroke-width:1.1; stroke-linecap:round; }
+.park { fill:var(--park); opacity:.34; stroke:#8fa874; stroke-width:1; }
+.water-main { fill:none; stroke:var(--river); stroke-width:22; stroke-linecap:round; stroke-linejoin:round; opacity:.86; }
+.water-inner { fill:none; stroke:var(--riverInner); stroke-width:12; stroke-linecap:round; stroke-linejoin:round; opacity:.78; }
+.water-yauza { fill:none; stroke:#82bad0; stroke-width:12; stroke-linecap:round; stroke-linejoin:round; opacity:.86; }
+.water-yauza-inner { fill:none; stroke:#d8f0f6; stroke-width:6; stroke-linecap:round; stroke-linejoin:round; opacity:.78; }
+.embankment { fill:none; stroke:rgba(55,80,89,.23); stroke-width:1.3; stroke-linecap:round; stroke-dasharray:5 8; }
+.road-casing { fill:none; stroke:rgba(118,82,46,.24); stroke-width:10; stroke-linecap:round; stroke-linejoin:round; }
+.road-major { fill:none; stroke:var(--road); stroke-width:6.2; stroke-linecap:round; stroke-linejoin:round; opacity:.78; }
+.road-major-inner { fill:none; stroke:var(--roadInner); stroke-width:2.8; stroke-linecap:round; stroke-linejoin:round; opacity:.88; }
+.road-secondary { fill:none; stroke:var(--road2); stroke-width:3.8; stroke-linecap:round; stroke-linejoin:round; opacity:.70; }
+.road-secondary-inner { fill:none; stroke:#fff7ea; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:.72; }
+.bridge { fill:none; stroke:#f6ead9; stroke-width:10; stroke-linecap:round; opacity:.9; }
+.bridge-line { fill:none; stroke:#b89562; stroke-width:1.6; stroke-linecap:round; opacity:.75; }
+.area-label { fill:#24384b; font-weight:800; font-size:17px; opacity:.76; paint-order:stroke fill; stroke:#fff6e8; stroke-width:3px; stroke-linejoin:round; }
+.street-label { fill:#735d4b; font-weight:650; font-size:13px; opacity:.72; paint-order:stroke fill; stroke:#fff6e8; stroke-width:2.5px; stroke-linejoin:round; }
+.water-label { fill:#1d6b8a; font-weight:850; font-size:13px; opacity:.88; paint-order:stroke fill; stroke:#e7f6fa; stroke-width:3px; stroke-linejoin:round; }
+.marker { cursor:pointer; transition:opacity .15s ease; }
+.marker .halo { opacity:.16; }
+.marker.selected .pin-ring { stroke:#0e1d31; stroke-width:4.5; }
+.marker-label-bg { fill:rgba(255,253,248,.95); stroke:rgba(144,86,43,.48); stroke-width:1.3; }
+.marker-label-text { fill:#0b1930; font-size:18px; font-weight:900; paint-order:stroke fill; stroke:#fffdf8; stroke-width:5.2px; stroke-linejoin:round; }
+.pin-number { fill:#fffdf8; font-size:27px; font-weight:900; paint-order:stroke fill; stroke:rgba(0,0,0,.10); stroke-width:1.1px; }
+
+@media (max-width: 1080px) {
+  .hero-row { display:block; }
+  .metrics { justify-content:flex-start; margin-top:14px; }
+  .layout { grid-template-columns:1fr; }
+  .panel { min-height:auto; }
+  .map-wrap { height:62vh; min-height:430px; max-height:680px; }
+  .object-cards { grid-template-columns:1fr; }
+}
+@media (max-width: 640px) {
+  .app { width:calc(100vw - 14px); margin:7px auto 18px; }
+  .hero { padding:16px; border-radius:20px; }
+  h1 { font-size:30px; }
+  .subtitle { letter-spacing:.07em; font-size:13px; }
+  .metric { flex:1 1 30%; min-width:96px; padding:8px 9px; }
+  .metric b { font-size:18px; }
+  .metric span { font-size:11px; }
+  .toolbar { align-items:flex-start; }
+  button, .link { min-height:42px; padding:9px 12px; font-size:13px; }
+  .map-wrap { height:66vh; min-height:430px; border-radius:0; }
+  .legend { position:static; width:auto; margin:10px 12px 0; }
+  .hints { position:static; margin:10px 12px 12px; max-width:none; }
+  .panel-head, .panel-body { padding-left:16px; padding-right:16px; }
+  .info-grid { grid-template-columns:1fr; }
+  .score-row { grid-template-columns:1fr 92px 30px; }
+  .object-card { grid-template-columns:64px 1fr; padding:13px; }
+  .object-card h3 { font-size:20px; }
+  table { min-width:760px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div class="hero-row">
+      <div>
+        <h1>Интерактивная карта ОКН для целей ревалоризации</h1>
+        <div class="subtitle">Пилотный прототип по двум объектам</div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><b>2</b><span>объекта</span></div>
+        <div class="metric"><b>8×0–3</b><span>критерии</span></div>
+        <div class="metric"><b>24</b><span>макс. индекс</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="card">
+      <div class="toolbar">
+        <div class="btns">
+          <button id="showAll" class="active" type="button">Все объекты</button>
+          <button data-filter="Первоочередная" type="button">Первоочередные</button>
+          <button data-filter="Поэтапная" type="button">Поэтапные</button>
+        </div>
+        <div class="btns">
+          <button id="focus0" type="button">Карабановы</button>
+          <button id="focus1" type="button">Аршеневский</button>
+          <button id="zoomIn" type="button">＋</button>
+          <button id="zoomOut" type="button">−</button>
+          <button id="resetZoom" type="button">Сброс</button>
+        </div>
+      </div>
+      <div class="map-wrap" id="mapWrap">
+        <svg class="map-svg" id="mapSvg" viewBox="0 0 1200 720" aria-label="Интерактивная карта объектов культурного наследия Москвы">
+          <defs>
+            <linearGradient id="mapBg" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="#f5ead8"/>
+              <stop offset="58%" stop-color="#f0e2ca"/>
+              <stop offset="100%" stop-color="#e7dbc7"/>
+            </linearGradient>
+            <filter id="pinShadow" x="-45%" y="-45%" width="190%" height="190%">
+              <feDropShadow dx="0" dy="7" stdDeviation="4" flood-color="#3a2818" flood-opacity=".22"/>
+            </filter>
+          </defs>
+          <rect width="1200" height="720" fill="url(#mapBg)"/>
+          <g id="viewport">
+            <g id="paperLines"></g>
+            <g id="parks"></g>
+            <g id="water"></g>
+            <g id="roads"></g>
+            <g id="labels"></g>
+            <g id="markers"></g>
+          </g>
+        </svg>
+        <div class="legend">
+          <div class="legend-title">Легенда</div>
+          <div class="legend-row"><span class="dot" style="background:var(--red)"></span><span>Первоочередная ревалоризация<br>22–24 балла</span></div>
+          <div class="legend-row"><span class="dot" style="background:var(--orange)"></span><span>Поэтапная ревалоризация<br>16–21 балл</span></div>
+        </div>
+        <div class="hints">
+          <span class="hint">Нажмите на маркер</span>
+          <span class="hint">Двигайте карту пальцем</span>
+          <span class="hint">Кнопки ＋/− меняют масштаб</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card panel">
+      <div class="panel-head" id="panelHead"></div>
+      <div class="panel-body" id="panelBody"></div>
+    </aside>
+  </div>
+
+  <section class="object-cards" id="objectCards"></section>
+
+  <section class="card table-card">
+    <div class="table-title">
+      <div>
+        <h2>Сравнительная таблица пилотных объектов</h2>
+        <div class="note">Оценка: 8 критериев × 0–3 балла. Инструмент помогает выбрать приоритет ревалоризации и управленческий сценарий.</div>
+      </div>
+      <div class="btns">
+        <button id="downloadGeojson" type="button">Скачать GeoJSON</button>
+        <button id="downloadCsv" type="button">Скачать CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap"><table id="compareTable"></table></div>
+  </section>
+</div>
+
+<script>
+var features = [{"type": "Feature", "properties": {"name": "Усадьба Карабановых", "address": "г. Москва, Бауманская ул., 38", "status": "ОКН федерального значения", "typology": "Раздробленный усадебный ансамбль", "condition": "Части ансамбля имеют разное состояние; главное здание находится в процессе реставрации, часть элементов не используется.", "current_use": "Один из флигелей включен в жизнь города как московский центр долголетия; остальные части ансамбля используются ограниченно или не используются.", "problem": "Ансамбль управленчески и функционально раздроблен: разные элементы имеют разное состояние и разные сценарии использования, а главное здание долго находится в реставрационном цикле. Это мешает воспринимать усадьбу как целостный объект ревалоризации.", "potential": "Высокий", "scenario": "Первоочередная комплексная ревалоризация ансамбля с сохранением общественной функции и развитием культурно-просветительского сценария.", "measures": "Сформировать единый имущественно-кадастровый паспорт ансамбля; актуализировать статус и состояние каждого элемента; разработать общую концепцию использования; связать действующую социальную функцию с культурной интерпретацией усадьбы; предусмотреть навигацию и включение объекта в локальный маршрут.", "index_vkr_24": 23, "index_map_21": 20, "priority_short": "Первоочередная", "priority_full": "Первоочередная ревалоризация", "scores": {"score_comment": "Высокий потенциал при ограничении, связанном с раздробленностью ансамбля и необходимостью единого управленческого сценария."}, "score_details": [{"label": "Историко-культурная ценность", "score": 3}, {"label": "Градостроительная и средовая роль", "score": 3}, {"label": "Архитектурно-пространственная выразительность", "score": 3}, {"label": "Физическое состояние и риск утраты", "score": 3}, {"label": "Функциональная адаптивность", "score": 3}, {"label": "Социально-экономический потенциал", "score": 3}, {"label": "Доступность и включенность в городскую среду", "score": 3}, {"label": "Управленческая реализуемость", "score": 2}], "osm_url": "https://www.openstreetmap.org/?mlat=55.771626&mlon=37.678523#map=18/55.771626/37.678523"}, "geometry": {"type": "Point", "coordinates": [37.678523, 55.771626]}}, {"type": "Feature", "properties": {"name": "Усадьба Аршеневского", "address": "г. Москва, Таганская ул., 13с3", "status": "ОКН регионального значения", "typology": "Раздробленный усадебный ансамбль", "condition": "Части ансамбля имеют разное состояние; отдельные элементы отреставрированы, но используются ограниченно.", "current_use": "Отдельные части включены в экономический оборот; главное здание находится в частной собственности и приспосабливается под жилую функцию; второй флигель отреставрирован, но не используется.", "problem": "Основная проблема связана не столько с отсутствием ценности, сколько с ограниченной публичной доступностью, частным сценарием использования и слабой интерпретацией объекта для горожан.", "potential": "Высокий, но раскрывается поэтапно", "scenario": "Поэтапная ревалоризация через интерпретацию, маршрутное включение, раскрытие историко-культурной ценности и поиск мягких общественных функций для неиспользуемых частей ансамбля.", "measures": "Зафиксировать состав ансамбля и фактическое использование элементов; разработать паспорт объекта для целей ревалоризации; предусмотреть информационную навигацию; включить объект в локальный историко-культурный маршрут; проработать сценарий использования неиспользуемого флигеля без нарушения охранного режима.", "index_vkr_24": 19, "index_map_21": 16, "priority_short": "Поэтапная", "priority_full": "Поэтапная ревалоризация", "scores": {"score_comment": "Высокая ценность объекта сочетается с ограниченной публичностью и необходимостью поэтапного раскрытия потенциала."}, "score_details": [{"label": "Историко-культурная ценность", "score": 3}, {"label": "Градостроительная и средовая роль", "score": 3}, {"label": "Архитектурно-пространственная выразительность", "score": 3}, {"label": "Физическое состояние и риск утраты", "score": 2}, {"label": "Функциональная адаптивность", "score": 2}, {"label": "Социально-экономический потенциал", "score": 2}, {"label": "Доступность и включенность в городскую среду", "score": 2}, {"label": "Управленческая реализуемость", "score": 2}], "osm_url": "https://www.openstreetmap.org/?mlat=55.740750&mlon=37.661132#map=18/55.740750/37.661132"}, "geometry": {"type": "Point", "coordinates": [37.661132, 55.74075]}}];
+var geojson = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"name": "Усадьба Карабановых", "address": "г. Москва, Бауманская ул., 38", "status": "ОКН федерального значения", "typology": "Раздробленный усадебный ансамбль", "condition": "Части ансамбля имеют разное состояние; главное здание находится в процессе реставрации, часть элементов не используется.", "current_use": "Один из флигелей включен в жизнь города как московский центр долголетия; остальные части ансамбля используются ограниченно или не используются.", "problem": "Ансамбль управленчески и функционально раздроблен: разные элементы имеют разное состояние и разные сценарии использования, а главное здание долго находится в реставрационном цикле. Это мешает воспринимать усадьбу как целостный объект ревалоризации.", "potential": "Высокий", "scenario": "Первоочередная комплексная ревалоризация ансамбля с сохранением общественной функции и развитием культурно-просветительского сценария.", "measures": "Сформировать единый имущественно-кадастровый паспорт ансамбля; актуализировать статус и состояние каждого элемента; разработать общую концепцию использования; связать действующую социальную функцию с культурной интерпретацией усадьбы; предусмотреть навигацию и включение объекта в локальный маршрут.", "index_vkr_24": 23, "index_map_21": 20, "priority_short": "Первоочередная", "priority_full": "Первоочередная ревалоризация", "scores": {"score_comment": "Высокий потенциал при ограничении, связанном с раздробленностью ансамбля и необходимостью единого управленческого сценария."}, "score_details": [{"label": "Историко-культурная ценность", "score": 3}, {"label": "Градостроительная и средовая роль", "score": 3}, {"label": "Архитектурно-пространственная выразительность", "score": 3}, {"label": "Физическое состояние и риск утраты", "score": 3}, {"label": "Функциональная адаптивность", "score": 3}, {"label": "Социально-экономический потенциал", "score": 3}, {"label": "Доступность и включенность в городскую среду", "score": 3}, {"label": "Управленческая реализуемость", "score": 2}], "osm_url": "https://www.openstreetmap.org/?mlat=55.771626&mlon=37.678523#map=18/55.771626/37.678523"}, "geometry": {"type": "Point", "coordinates": [37.678523, 55.771626]}}, {"type": "Feature", "properties": {"name": "Усадьба Аршеневского", "address": "г. Москва, Таганская ул., 13с3", "status": "ОКН регионального значения", "typology": "Раздробленный усадебный ансамбль", "condition": "Части ансамбля имеют разное состояние; отдельные элементы отреставрированы, но используются ограниченно.", "current_use": "Отдельные части включены в экономический оборот; главное здание находится в частной собственности и приспосабливается под жилую функцию; второй флигель отреставрирован, но не используется.", "problem": "Основная проблема связана не столько с отсутствием ценности, сколько с ограниченной публичной доступностью, частным сценарием использования и слабой интерпретацией объекта для горожан.", "potential": "Высокий, но раскрывается поэтапно", "scenario": "Поэтапная ревалоризация через интерпретацию, маршрутное включение, раскрытие историко-культурной ценности и поиск мягких общественных функций для неиспользуемых частей ансамбля.", "measures": "Зафиксировать состав ансамбля и фактическое использование элементов; разработать паспорт объекта для целей ревалоризации; предусмотреть информационную навигацию; включить объект в локальный историко-культурный маршрут; проработать сценарий использования неиспользуемого флигеля без нарушения охранного режима.", "index_vkr_24": 19, "index_map_21": 16, "priority_short": "Поэтапная", "priority_full": "Поэтапная ревалоризация", "scores": {"score_comment": "Высокая ценность объекта сочетается с ограниченной публичностью и необходимостью поэтапного раскрытия потенциала."}, "score_details": [{"label": "Историко-культурная ценность", "score": 3}, {"label": "Градостроительная и средовая роль", "score": 3}, {"label": "Архитектурно-пространственная выразительность", "score": 3}, {"label": "Физическое состояние и риск утраты", "score": 2}, {"label": "Функциональная адаптивность", "score": 2}, {"label": "Социально-экономический потенциал", "score": 2}, {"label": "Доступность и включенность в городскую среду", "score": 2}, {"label": "Управленческая реализуемость", "score": 2}], "osm_url": "https://www.openstreetmap.org/?mlat=55.740750&mlon=37.661132#map=18/55.740750/37.661132"}, "geometry": {"type": "Point", "coordinates": [37.661132, 55.74075]}}]};
+var csvText = "name,address,status,lat,lon,index_vkr_24,priority_short,scenario\nУсадьба Карабановых,\"г. Москва, Бауманская ул., 38\",ОКН федерального значения,55.771626,37.678523,23,Первоочередная,Первоочередная комплексная ревалоризация ансамбля с сохранением общественной функции и развитием культурно-просветительского сценария.\nУсадьба Аршеневского,\"г. Москва, Таганская ул., 13с3\",ОКН регионального значения,55.74075,37.661132,19,Поэтапная,\"Поэтапная ревалоризация через интерпретацию, маршрутное включение, раскрытие историко-культурной ценности и поиск мягких общественных функций для неиспользуемых частей ансамбля.\"\n";
+
+var bounds = { minLon:37.590, maxLon:37.705, minLat:55.724, maxLat:55.784 };
+var mapW = 1200, mapH = 720, marginX = 76, marginTop = 55, marginBottom = 76;
+var selectedIndex = 0;
+var currentFilter = null;
+var view = { zoom:1, x:0, y:0 };
+var dragging = false;
+var dragStart = null;
+
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function project(lon, lat) {
+  return {
+    x: marginX + ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * (mapW - marginX * 2),
+    y: marginTop + ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat)) * (mapH - marginTop - marginBottom)
+  };
+}
+function makeEl(name, attrs) {
+  var n = document.createElementNS('http://www.w3.org/2000/svg', name);
+  attrs = attrs || {};
+  for (var k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function pathFrom(coords) {
+  var pts = coords.map(function(c) { return project(c[0], c[1]); });
+  if (pts.length < 2) return '';
+  var d = 'M ' + pts[0].x.toFixed(1) + ' ' + pts[0].y.toFixed(1);
+  for (var i = 0; i < pts.length - 1; i++) {
+    var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    var cp1x = p1.x + (p2.x - p0.x) / 6, cp1y = p1.y + (p2.y - p0.y) / 6;
+    var cp2x = p2.x - (p3.x - p1.x) / 6, cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ' C ' + cp1x.toFixed(1) + ' ' + cp1y.toFixed(1) + ', ' + cp2x.toFixed(1) + ' ' + cp2y.toFixed(1) + ', ' + p2.x.toFixed(1) + ' ' + p2.y.toFixed(1);
+  }
+  return d;
+}
+function addPath(parent, cls, coords) {
+  var p = makeEl('path', { class:cls, d:pathFrom(coords) });
+  parent.appendChild(p);
+}
+function addRoad(parent, coords, major) {
+  if (major) {
+    addPath(parent, 'road-casing', coords);
+    addPath(parent, 'road-major', coords);
+    addPath(parent, 'road-major-inner', coords);
+  } else {
+    addPath(parent, 'road-secondary', coords);
+    addPath(parent, 'road-secondary-inner', coords);
+  }
+}
+function poly(parent, cls, coords) {
+  var pts = coords.map(function(c) {
+    var p = project(c[0], c[1]);
+    return p.x.toFixed(1) + ',' + p.y.toFixed(1);
+  }).join(' ');
+  parent.appendChild(makeEl('polygon', { class:cls, points:pts }));
+}
+function addText(parent, text, lon, lat, cls, rotate) {
+  var p = project(lon, lat);
+  var t = makeEl('text', { class:cls, x:p.x, y:p.y, 'text-anchor':'middle' });
+  if (rotate) t.setAttribute('transform', 'rotate(' + rotate + ' ' + p.x + ' ' + p.y + ')');
+  t.textContent = text;
+  parent.appendChild(t);
+}
+function bridge(parent, lon, lat, angle) {
+  var p = project(lon, lat);
+  var g = makeEl('g', { transform:'translate(' + p.x + ' ' + p.y + ') rotate(' + angle + ')' });
+  g.appendChild(makeEl('path', { class:'bridge', d:'M -20 0 L 20 0' }));
+  g.appendChild(makeEl('path', { class:'bridge-line', d:'M -20 -5 L 20 -5 M -20 5 L 20 5' }));
+  parent.appendChild(g);
+}
+function renderBaseMap() {
+  var paper = document.getElementById('paperLines');
+  var parks = document.getElementById('parks');
+  var water = document.getElementById('water');
+  var roads = document.getElementById('roads');
+  var labels = document.getElementById('labels');
+
+  [
+    [[37.590,55.779],[37.612,55.775],[37.638,55.771],[37.662,55.775],[37.704,55.779]],
+    [[37.594,55.765],[37.623,55.760],[37.654,55.758],[37.683,55.762],[37.705,55.766]],
+    [[37.592,55.752],[37.620,55.748],[37.654,55.746],[37.684,55.750],[37.705,55.755]],
+    [[37.594,55.737],[37.630,55.735],[37.664,55.737],[37.690,55.742],[37.705,55.746]]
+  ].forEach(function(line) { addPath(paper, 'paper-line', line); });
+
+  poly(parks, 'park', [[37.606,55.760],[37.620,55.760],[37.621,55.749],[37.607,55.748]]);
+  poly(parks, 'park', [[37.671,55.781],[37.691,55.780],[37.690,55.773],[37.674,55.772]]);
+  poly(parks, 'park', [[37.637,55.756],[37.654,55.755],[37.656,55.748],[37.640,55.747]]);
+  poly(parks, 'park', [[37.668,55.739],[37.681,55.738],[37.681,55.733],[37.668,55.732]]);
+
+  var moscowRiver = [[37.590,55.748],[37.603,55.747],[37.615,55.742],[37.628,55.738],[37.642,55.736],[37.657,55.733],[37.672,55.731],[37.689,55.729],[37.705,55.730]];
+  addPath(water, 'water-main', moscowRiver);
+  addPath(water, 'water-inner', moscowRiver);
+  addPath(water, 'embankment', [[37.594,55.750],[37.614,55.745],[37.632,55.740],[37.657,55.735],[37.689,55.731]]);
+
+  var yauza = [[37.703,55.784],[37.697,55.779],[37.690,55.771],[37.685,55.762],[37.678,55.753],[37.667,55.745],[37.656,55.739],[37.651,55.735]];
+  addPath(water, 'water-yauza', yauza);
+  addPath(water, 'water-yauza-inner', yauza);
+  bridge(water, 37.683, 55.760, -56);
+  bridge(water, 37.662, 55.742, -30);
+
+  [
+    [[37.600,55.770],[37.618,55.766],[37.640,55.760],[37.659,55.754],[37.683,55.748],[37.703,55.744]],
+    [[37.620,55.784],[37.630,55.770],[37.638,55.756],[37.649,55.742],[37.660,55.729]],
+    [[37.606,55.732],[37.631,55.739],[37.657,55.746],[37.684,55.752],[37.704,55.759]]
+  ].forEach(function(r) { addRoad(roads, r, true); });
+  [
+    [[37.600,55.777],[37.621,55.772],[37.645,55.768],[37.668,55.764],[37.697,55.761]],
+    [[37.610,55.758],[37.630,55.755],[37.653,55.752],[37.674,55.750]],
+    [[37.618,55.744],[37.640,55.742],[37.661,55.741],[37.683,55.739]],
+    [[37.645,55.783],[37.655,55.770],[37.665,55.757],[37.674,55.744]],
+    [[37.674,55.782],[37.677,55.771],[37.680,55.759],[37.684,55.747]],
+    [[37.690,55.783],[37.684,55.774],[37.678,55.765],[37.670,55.753]],
+    [[37.651,55.759],[37.661,55.748],[37.670,55.737],[37.682,55.728]],
+    [[37.622,55.752],[37.641,55.755],[37.661,55.759],[37.682,55.762]]
+  ].forEach(function(r) { addRoad(roads, r, false); });
+
+  addText(labels, 'Садовое кольцо', 37.617, 55.767, 'street-label', -12);
+  addText(labels, 'ул. Земляной Вал', 37.649, 55.746, 'street-label', 12);
+  addText(labels, 'ул. Радио', 37.678, 55.773, 'street-label', -12);
+  addText(labels, 'Бауманская', 37.675, 55.777, 'area-label', 0);
+  addText(labels, 'Таганская', 37.652, 55.743, 'area-label', 0);
+  addText(labels, 'Китай-город', 37.625, 55.756, 'area-label', 0);
+  addText(labels, 'Яуза', 37.692, 55.765, 'water-label', -57);
+  addText(labels, 'Москва-река', 37.613, 55.739, 'water-label', -13);
+}
+function colorFor(p) { return p.priority_short.indexOf('Первоочеред') !== -1 ? css('--red') : css('--orange'); }
+function clsFor(p) { return p.priority_short.indexOf('Первоочеред') !== -1 ? 'red' : 'orange'; }
+function safe(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+function drawMarkers() {
+  var g = document.getElementById('markers');
+  g.innerHTML = '';
+  features.forEach(function(ft, i) {
+    var p = ft.properties;
+    var pt = project(ft.geometry.coordinates[0], ft.geometry.coordinates[1]);
+    var hidden = currentFilter && p.priority_short.indexOf(currentFilter) === -1;
+    var labelX = 46, labelY = i === 0 ? -48 : -44, labelW = i === 0 ? 260 : 275, labelH = 72;
+    var node = makeEl('g', { class:'marker ' + (i === selectedIndex ? 'selected' : ''), transform:'translate(' + pt.x.toFixed(1) + ',' + pt.y.toFixed(1) + ')', tabindex:'0', role:'button', 'aria-label':p.name });
+    node.style.opacity = hidden ? '.18' : '1';
+    node.innerHTML =
+      '<circle class="halo" cx="0" cy="0" r="39" fill="' + colorFor(p) + '"></circle>' +
+      '<circle cx="0" cy="0" r="29" fill="' + colorFor(p) + '" filter="url(#pinShadow)"></circle>' +
+      '<circle class="pin-ring" cx="0" cy="0" r="29" fill="none" stroke="#fffdf8" stroke-width="4"></circle>' +
+      '<text class="pin-number" x="0" y="9" text-anchor="middle">' + (i + 1) + '</text>' +
+      '<rect class="marker-label-bg" x="' + labelX + '" y="' + labelY + '" width="' + labelW + '" height="' + labelH + '" rx="14"></rect>' +
+      '<text class="marker-label-text" x="' + (labelX + 20) + '" y="' + (labelY + 29) + '">' +
+      '<tspan x="' + (labelX + 20) + '" dy="0">Усадьба</tspan>' +
+      '<tspan x="' + (labelX + 20) + '" dy="25">' + safe(p.name.replace('Усадьба ', '')) + '</tspan></text>';
+    node.addEventListener('click', function() { select(i); });
+    node.addEventListener('touchend', function(e) { e.preventDefault(); select(i); }, false);
+    g.appendChild(node);
+  });
+}
+function scoreRows(p) {
+  return p.score_details.map(function(item) {
+    return '<div class="score-row"><span>' + safe(item.label) + '</span><span class="bar"><i style="width:' + (item.score / 3 * 100) + '%"></i></span><b>' + item.score + '/3</b></div>';
+  }).join('');
+}
+function renderPanel() {
+  var ft = features[selectedIndex], p = ft.properties, lon = ft.geometry.coordinates[0], lat = ft.geometry.coordinates[1];
+  document.getElementById('panelHead').innerHTML =
+    '<div class="eyebrow">Карточка объекта</div><h2>' + safe(p.name) + '</h2>' +
+    '<div class="address">' + safe(p.address) + '<br>' + safe(p.status) + '</div>' +
+    '<span class="badge ' + clsFor(p) + '">' + safe(p.priority_short) + '</span>' +
+    '<span class="badge ' + clsFor(p) + '">' + p.index_vkr_24 + '/24 по ВКР</span>';
+  document.getElementById('panelBody').innerHTML =
+    '<div class="info-grid">' +
+    '<div class="info"><small>Потенциал</small><b>' + safe(p.potential) + '</b></div>' +
+    '<div class="info"><small>Индекс карты</small><b>' + p.index_map_21 + '/21</b></div>' +
+    '<div class="info"><small>Координаты</small><b>' + lat.toFixed(6) + ', ' + lon.toFixed(6) + '</b></div>' +
+    '<div class="info"><small>Типология</small><b>' + safe(p.typology) + '</b></div></div>' +
+    '<div class="section"><h3>Состояние и использование</h3><p>' + safe(p.condition) + '<br><br>' + safe(p.current_use) + '</p></div>' +
+    '<div class="section"><h3>Проблема управления</h3><p>' + safe(p.problem) + '</p></div>' +
+    '<div class="section"><h3>Рекомендуемый сценарий</h3><p>' + safe(p.scenario) + '</p></div>' +
+    '<div class="section"><h3>Меры ревалоризации</h3><p>' + safe(p.measures) + '</p></div>' +
+    '<div class="section"><h3>Балльная оценка по методике ВКР</h3><div class="score-list">' + scoreRows(p) + '</div><div class="score-note">' + safe(p.scores.score_comment) + '</div></div>' +
+    '<div class="section"><a class="link" href="' + p.osm_url + '" target="_blank" rel="noreferrer">Открыть точку в OSM</a></div>';
+  renderCards();
+}
+function renderCards() {
+  var html = '';
+  features.forEach(function(ft, i) {
+    var p = ft.properties, color = colorFor(p);
+    html += '<article class="card object-card ' + (i === selectedIndex ? 'selected' : '') + '" data-idx="' + i + '">' +
+      '<div class="medal" style="background:' + color + '">' + (i + 1) + '</div><div>' +
+      '<h3>' + safe(p.name) + '</h3>' +
+      '<div class="card-line">⌖ <span>' + safe(p.address) + '</span></div>' +
+      '<div class="card-line">♜ <span><b>Статус:</b> ' + safe(p.status) + '</span></div>' +
+      '<div class="card-line">✦ <span><b>Категория:</b> <span style="color:' + color + ';font-weight:800">' + safe(p.priority_full) + '</span></span></div>' +
+      '</div></article>';
+  });
+  document.getElementById('objectCards').innerHTML = html;
+  Array.prototype.forEach.call(document.querySelectorAll('.object-card'), function(card) {
+    card.addEventListener('click', function() { select(Number(card.getAttribute('data-idx'))); });
+  });
+}
+function renderTable() {
+  var rows = '';
+  features.forEach(function(ft, i) {
+    var p = ft.properties;
+    rows += '<tr class="' + (i === selectedIndex ? 'selected' : '') + '" data-idx="' + i + '">' +
+      '<td><b>' + (i + 1) + '. ' + safe(p.name) + '</b><br><span class="note">' + safe(p.address) + '</span></td>' +
+      '<td>' + safe(p.status) + '</td>' +
+      '<td><span class="badge ' + clsFor(p) + '">' + safe(p.priority_short) + '</span></td>' +
+      '<td><b>' + p.index_vkr_24 + '/24</b><br><span class="note">' + p.index_map_21 + '/21 для карты</span></td>' +
+      '<td>' + safe(p.scenario) + '</td></tr>';
+  });
+  document.getElementById('compareTable').innerHTML = '<thead><tr><th>Объект</th><th>Статус</th><th>Приоритет</th><th>Индекс</th><th>Сценарий</th></tr></thead><tbody>' + rows + '</tbody>';
+  Array.prototype.forEach.call(document.querySelectorAll('#compareTable tbody tr'), function(row) {
+    row.addEventListener('click', function() { select(Number(row.getAttribute('data-idx'))); });
+  });
+}
+function select(i) {
+  selectedIndex = i;
+  drawMarkers();
+  renderPanel();
+  renderTable();
+}
+function setFilter(f) {
+  currentFilter = f;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-filter]'), function(btn) { btn.classList.toggle('active', btn.getAttribute('data-filter') === f); });
+  document.getElementById('showAll').classList.toggle('active', !f);
+  drawMarkers();
+}
+function applyView() { document.getElementById('viewport').setAttribute('transform', 'translate(' + view.x + ' ' + view.y + ') scale(' + view.zoom + ')'); }
+function focusObject(i) {
+  var ft = features[i], pt = project(ft.geometry.coordinates[0], ft.geometry.coordinates[1]);
+  view.zoom = window.innerWidth < 700 ? 1.35 : 1.55;
+  view.x = 600 - pt.x * view.zoom + (i === 0 ? -80 : -30);
+  view.y = 360 - pt.y * view.zoom + (i === 0 ? 35 : -10);
+  select(i);
+  applyView();
+}
+function download(filename, content, mime) {
+  try {
+    var blob = new Blob([content], {type:mime + ';charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Скачивание может быть недоступно при локальном открытии на телефоне. Откройте ZIP на компьютере или используйте файл CSV/GeoJSON из архива.');
+  }
+}
+
+document.getElementById('showAll').addEventListener('click', function() { setFilter(null); });
+Array.prototype.forEach.call(document.querySelectorAll('[data-filter]'), function(btn) {
+  btn.addEventListener('click', function() { setFilter(btn.getAttribute('data-filter')); });
+});
+document.getElementById('focus0').addEventListener('click', function() { focusObject(0); });
+document.getElementById('focus1').addEventListener('click', function() { focusObject(1); });
+document.getElementById('zoomIn').addEventListener('click', function() { view.zoom = Math.min(2.2, view.zoom + .14); applyView(); });
+document.getElementById('zoomOut').addEventListener('click', function() { view.zoom = Math.max(.82, view.zoom - .14); applyView(); });
+document.getElementById('resetZoom').addEventListener('click', function() { view = {zoom:1,x:0,y:0}; applyView(); });
+document.getElementById('downloadGeojson').addEventListener('click', function() { download('okn_objects_yandex_mobile.geojson', JSON.stringify(geojson, null, 2), 'application/geo+json'); });
+document.getElementById('downloadCsv').addEventListener('click', function() { download('okn_objects_yandex_mobile.csv', csvText, 'text/csv'); });
+
+var svg = document.getElementById('mapSvg');
+function point(e) {
+  if (e.touches && e.touches.length) return {x:e.touches[0].clientX, y:e.touches[0].clientY};
+  return {x:e.clientX, y:e.clientY};
+}
+function startDrag(e) {
+  var p = point(e);
+  dragging = true;
+  dragStart = { x:p.x, y:p.y, vx:view.x, vy:view.y };
+  svg.classList.add('dragging');
+}
+function moveDrag(e) {
+  if (!dragging) return;
+  if (e.cancelable) e.preventDefault();
+  var p = point(e);
+  view.x = dragStart.vx + (p.x - dragStart.x);
+  view.y = dragStart.vy + (p.y - dragStart.y);
+  applyView();
+}
+function endDrag() { dragging = false; svg.classList.remove('dragging'); }
+svg.addEventListener('mousedown', startDrag, false);
+window.addEventListener('mousemove', moveDrag, false);
+window.addEventListener('mouseup', endDrag, false);
+svg.addEventListener('touchstart', startDrag, {passive:true});
+svg.addEventListener('touchmove', moveDrag, {passive:false});
+svg.addEventListener('touchend', endDrag, false);
+svg.addEventListener('wheel', function(e) {
+  if (e.cancelable) e.preventDefault();
+  view.zoom = Math.min(2.2, Math.max(.82, view.zoom + (e.deltaY < 0 ? .10 : -.10)));
+  applyView();
+}, {passive:false});
+
+renderBaseMap();
+drawMarkers();
+renderPanel();
+renderTable();
+applyView();
+</script>
+</body>
+</html>
